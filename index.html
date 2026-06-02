@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batalha Mágica - Portal Integrado</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 50%, #16213e 100%);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* Navegação */
+        nav {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid #ff9800;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #ff9800;
+            text-shadow: 0 0 10px #ff9800;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-btn:hover {
+            background: #1976D2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.4);
+        }
+
+        .nav-btn.active {
+            background: #ff9800;
+        }
+
+        /* Container Principal */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Seção Hero */
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(33, 150, 243, 0.1) 100%);
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            border: 2px solid #ff9800;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin-bottom: 1rem;
+            color: #ff9800;
+            text-shadow: 0 0 20px #ff9800;
+        }
+
+        .hero p {
+            font-size: 20px;
+            margin-bottom: 2rem;
+            color: #ccc;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary, .btn-secondary {
+            padding: 15px 40px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #ff9800;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+        }
+
+        .btn-primary:hover {
+            background: #ffa726;
+            transform: scale(1.05);
+        }
+
+        .btn-secondary {
+            background: #2196F3;
+            color: white;
+            box-shadow: 0 0 20px rgba(33, 150, 243, 0.5);
+        }
+
+        .btn-secondary:hover {
+            background: #1976D2;
+            transform: scale(1.05);
+        }
+
+        /* Seções de conteúdo */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Seção Jogo */
+        .game-section {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 2rem;
+            border: 2px solid #00ffff;
+        }
+
+        .game-iframe-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
+            overflow: hidden;
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+
+        .game-iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Seção Relatório */
+        .report-section {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 2rem;
+            border: 2px solid #4CAF50;
+        }
+
+        .report-content {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            max-height: 700px;
+            overflow-y: auto;
+        }
+
+        .report-content h2 {
+            color: #4CAF50;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-content h3 {
+            color: #80c784;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .report-content p {
+            line-height: 1.6;
+            color: #ccc;
+            margin-bottom: 1rem;
+        }
+
+        .report-content ul, .report-content ol {
+            margin-left: 2rem;
+            color: #ccc;
+        }
+
+        .report-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .report-content code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #00ffff;
+        }
+
+        .report-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+        }
+
+        .report-content table th, .report-content table td {
+            border: 1px solid #555;
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        .report-content table th {
+            background: rgba(76, 175, 80, 0.2);
+        }
+
+        /* Seção Características */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #ff9800;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(255, 152, 0, 0.3);
+        }
+
+        .feature-card h3 {
+            color: #ff9800;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+            border-top: 1px solid #555;
+            margin-top: 3rem;
+        }
+
+        /* Scrollbar personalizada */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ff9800;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ffa726;
+        }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 32px;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .hero-buttons {
+                flex-direction: column;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navegação -->
+    <nav>
+        <div class="logo">🐉 Batalha Mágica 🧙</div>
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showSection('home')">Início</button>
+            <button class="nav-btn" onclick="showSection('game')">Jogar</button>
+            <button class="nav-btn" onclick="showSection('report')">Relatório</button>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div class="container">
+
+        <!-- Seção: Início -->
+        <div id="home" class="content-section active">
+            <div class="hero">
+                <h1>⚔️ Batalha Mágica vs Dragão ⚔️</h1>
+                <p>Um jogo 3D épico desenvolvido com Three.js</p>
+                <p style="font-size: 16px; color: #aaa;">Derrote o dragão ancestral usando sua varinha mágica!</p>
+                <div class="hero-buttons">
+                    <button class="btn-primary" onclick="showSection('game')">🎮 Começar Jogo</button>
+                    <button class="btn-secondary" onclick="showSection('report')">📖 Ver Relatório</button>
+                </div>
+            </div>
+
+            <div class="features">
+                <div class="feature-card">
+                    <h3>🎯 Gráficos 3D</h3>
+                    <p>Renderização 3D em tempo real com Three.js, ambientes dinâmicos e efeitos visuais impressionantes.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>🤖 IA Inteligente</h3>
+                    <p>O dragão possui sistema de IA com máquina de estados (Chase, Attack, Reposition) para combate desafiador.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>⚡ Controles FPS</h3>
+                    <p>Controles de primeira pessoa com PointerLock, movimento suave e câmera responsiva.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>💥 Efeitos Visuais</h3>
+                    <p>Projéteis brilhantes, animações de asas, iluminação dinâmica e efeitos de impacto.</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>🏆 Sistema de Combate</h3>
+                    <p>Dispare feitiços para derrotar o dragão antes que suas bolas de fogo o incinerem!</p>
+                </div>
+
+                <div class="feature-card">
+                    <h3>📊 Interface Completa</h3>
+                    <p>HUD intuitivo com barras de vida, retícula de mira e menu fluido.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção: Jogo -->
+        <div id="game" class="content-section">
+            <div class="game-section">
+                <h2>🎮 Jogue Agora</h2>
+                <p style="margin-top: 1rem; color: #ccc;">
+                    <strong>Controles:</strong><br>
+                    W, A, S, D = Mover | Mouse = Olhar | Clique = Disparar Feitiço | ESC = Menu
+                </p>
+                <div class="game-iframe-container">
+                    <iframe src="jogo_de_magia_vs_drag_o.html"></iframe>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção: Relatório -->
+        <div id="report" class="content-section">
+            <div class="report-section">
+                <h2>📖 Relatório Técnico</h2>
+                <div class="report-content">
+                    <h2>📋 Visão Geral do Projeto</h2>
+                    <p>Este é um jogo 3D em primeira pessoa desenvolvido com <strong>Three.js</strong>, onde o jogador controla um mago em batalha contra um dragão ancestral em um ambiente de ruínas.</p>
+
+                    <h3>🎮 Mecânicas Principais</h3>
+                    <ul>
+                        <li><strong>Magia do Mago:</strong> Projéteis azuis disparados por clique esquerdo</li>
+                        <li><strong>Ataque do Dragão:</strong> Bolas de fogo que perseguem o jogador</li>
+                        <li><strong>Sistema de HP:</strong> Mago (100 HP - verde) vs Dragão (300 HP - vermelho)</li>
+                    </ul>
+
+                    <h3>🌍 Ambiente do Jogo</h3>
+                    <ul>
+                        <li>Chão de pedra 200x200</li>
+                        <li>15 pilares de ruína distribuídos aleatoriamente</li>
+                        <li>4 muros de contenção (limites da arena)</li>
+                        <li>Sistema de iluminação multi-camadas</li>
+                        <li>Neblina FogExp2 para efeito de profundidade</li>
+                    </ul>
+
+                    <h3>👾 Entidades 3D</h3>
+                    <p><strong>Varinha Mágica:</strong></p>
+                    <ul>
+                        <li>Handle: Cilindro marrom com 0.6 unidades</li>
+                        <li>Tip: Esfera ciano brilhante com efeito de luz</li>
+                        <li>Posicionada na câmera com offset (0.3, -0.2, -0.5)</li>
+                    </ul>
+
+                    <p style="margin-top: 1rem;"><strong>Dragão:</strong></p>
+                    <ul>
+                        <li>Corpo: Caixa 4x3x6 (vermelho escuro)</li>
+                        <li>Cabeça: Segue o jogador independentemente</li>
+                        <li>Asas: Batem continuamente com animação sine</li>
+                        <li>Cauda: Cone rotativo para equilíbrio visual</li>
+                        <li>Olhos: Amarelos brilhantes para expressão</li>
+                    </ul>
+
+                    <h3>⚙️ IA do Dragão</h3>
+                    <p><strong>Máquina de Estados:</strong></p>
+                    <ol>
+                        <li><strong>Chase:</strong> Persegue quando distante (>20 unidades)</li>
+                        <li><strong>Attack:</strong> Atira bolas de fogo a cada 1.5s</li>
+                        <li><strong>Reposition:</strong> Muda de posição com 30% de chance</li>
+                    </ol>
+
+                    <h3>🖥️ Tecnologias</h3>
+                    <ul>
+                        <li><strong>Three.js r128:</strong> Renderização 3D WebGL</li>
+                        <li><strong>PointerLockControls:</strong> Câmera FPS</li>
+                        <li><strong>HTML5/CSS3/JavaScript:</strong> Interface e lógica</li>
+                    </ul>
+
+                    <h3>🐛 Sistema de Colisão</h3>
+                    <ul>
+                        <li>Feitiço: Distância < 5 do dragão</li>
+                        <li>Bola de fogo: Distância < 2 do jogador</li>
+                        <li>Paredes: Limites X/Z ±98</li>
+                    </ul>
+
+                    <h3>🎯 Status do Projeto</h3>
+                    <p style="color: #4CAF50;"><strong>✅ Completo e Funcional</strong></p>
+                    <p>O jogo apresenta todas as mecânicas funcionando perfeitamente, com IA desafiadora, combate interativo e interface polida.</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>🐉 Batalha Mágica vs Dragão | Desenvolvido com Three.js | Junho 2026</p>
+        <p style="font-size: 12px; margin-top: 1rem;">Repositório: anthonypaulino-commits/harry-poter-vs-drag-o</p>
+    </footer>
+
+    <script>
+        function showSection(sectionId) {
+            // Ocultar todas as seções
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(section => section.classList.remove('active'));
+
+            // Mostrar seção ativa
+            document.getElementById(sectionId).classList.add('active');
+
+            // Atualizar botões da navegação
+            const buttons = document.querySelectorAll('.nav-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Scroll para o topo
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+
+</body>
+</html>
