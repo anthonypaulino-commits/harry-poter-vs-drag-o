@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batalha Mágica: O Dragão</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        #crosshair::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .health-bar-container {
+            width: 300px;
+            height: 25px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 20px;
+        }
+        #player-health {
+            height: 100%;
+            background-color: #4CAF50;
+            width: 100%;
+            transition: width 0.2s;
+        }
+        #dragon-health {
+            height: 100%;
+            background-color: #F44336;
+            width: 100%;
+            transition: width 0.2s;
+        }
+        .hud-top {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .hud-bottom {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-end;
+        }
+        .label {
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+            text-align: center;
+            margin-top: -22px;
+            position: relative;
+            z-index: 1;
+            font-size: 14px;
+        }
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: #ff9800;
+            text-shadow: 0 0 10px #ff9800;
+        }
+        p {
+            font-size: 18px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 600px;
+        }
+        button {
+            padding: 15px 40px;
+            font-size: 24px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        button:hover {
+            background-color: #1976D2;
+            transform: scale(1.05);
+        }
+        button:active {
+            transform: scale(0.95);
+        }
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: auto;
+            z-index: 20;
+        }
+        #game-over h2 {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+    </style>
+    <!-- Importando Three.js e PointerLockControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+</head>
+<body>
+
+    <div id="ui-container">
+        <div class="hud-top">
+            <div>
+                <div class="health-bar-container" style="border-color: #F44336; box-shadow: 0 0 10px #F44336;">
+                    <div id="dragon-health"></div>
+                </div>
+                <div class="label">DRAGÃO ANCESTRAL</div>
+            </div>
+        </div>
+        <div id="crosshair"></div>
+        <div class="hud-bottom">
+            <div>
+                <div class="health-bar-container" style="border-color: #4CAF50; box-shadow: 0 0 10px #4CAF50;">
+                    <div id="player-health"></div>
+                </div>
+                <div class="label">MAGO (VOCÊ)</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="menu">
+        <h1>Batalha Mágica</h1>
+        <p>Um terrível dragão invadiu as ruínas! Use sua varinha mágica para derrotá-lo.<br><br>
+        <b>Controles:</b><br>
+        W, A, S, D - Mover<br>
+        Mouse - Olhar ao redor<br>
+        Clique Esquerdo - Disparar Feitiço</p>
+        <button id="start-btn">Clique para Jogar</button>
+    </div>
+
+    <div id="game-over">
+        <h2 id="end-message">VOCÊ MORREU</h2>
+        <button onclick="location.reload()">Jogar Novamente</button>
+    </div>
+
+    <script>
+        // --- VARIÁVEIS GLOBAIS ---
+        let camera, scene, renderer, controls;
+        let prevTime = performance.now();
+        
+        // Movimento
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let canJump = false;
+
+        // Jogo
+        let gameActive = false;
+        let playerHP = 100;
+        let dragonHP = 300;
+        let wandTip;
+
+        // Entidades
+        const spells = [];
+        const fireballs = [];
+        let dragonGroup, dragonHead, leftWing, rightWing;
+        let dragonState = { mode: 'chase', timer: 0, hoverY: 0, time: 0 };
+        const obstacles = [];
+
+        // --- INICIALIZAÇÃO ---
+        init();
+        animate();
+
+        function init() {
+            // Cena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e); // Céu noturno
+            scene.fog = new THREE.FogExp2(0x1a1a2e, 0.015); // Neblina sinistra
+
+            // Câmera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.y = 2; // Altura do jogador
+
+            // Iluminação
+            const ambientLight = new THREE.AmbientLight(0x404060, 0.6); // Luz fraca azulada
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xaaaaaa, 0.5); // Luz da "lua"
+            directionalLight.position.set(-10, 20, -10);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.near = 0.1;
+            directionalLight.shadow.camera.far = 100;
+            directionalLight.shadow.camera.left = -50;
+            directionalLight.shadow.camera.right = 50;
+            directionalLight.shadow.camera.top = 50;
+            directionalLight.shadow.camera.bottom = -50;
+            scene.add(directionalLight);
+
+            // Adicionar uma luz verde para a área central
+            const pointLight = new THREE.PointLight(0x00ff00, 0.5, 50);
+            pointLight.position.set(0, 5, 0);
+            scene.add(pointLight);
+
+            // Renderizador
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            // Controles (PointerLock)
+            controls = new THREE.PointerLockControls(camera, document.body);
+
+            const startBtn = document.getElementById('start-btn');
+            const menu = document.getElementById('menu');
+
+            startBtn.addEventListener('click', () => {
+                controls.lock();
+            });
+
+            controls.addEventListener('lock', () => {
+                menu.style.display = 'none';
+                gameActive = true;
+            });
+
+            controls.addEventListener('unlock', () => {
+                if (playerHP > 0 && dragonHP > 0) {
+                    menu.style.display = 'flex';
+                    gameActive = false;
+                }
+            });
+
+            scene.add(controls.getObject());
+
+            // Eventos de Teclado
+            const onKeyDown = function (event) {
+                switch (event.code) {
+                    case 'ArrowUp':
+                    case 'KeyW': moveForward = true; break;
+                    case 'ArrowLeft':
+                    case 'KeyA': moveLeft = true; break;
+                    case 'ArrowDown':
+                    case 'KeyS': moveBackward = true; break;
+                    case 'ArrowRight':
+                    case 'KeyD': moveRight = true; break;
+                    case 'Space':
+                        if (canJump) { velocity.y += 150; canJump = false; }
+                        break;
+                }
+            };
+
+            const onKeyUp = function (event) {
+                switch (event.code) {
+                    case 'ArrowUp':
+                    case 'KeyW': moveForward = false; break;
+                    case 'ArrowLeft':
+                    case 'KeyA': moveLeft = false; break;
+                    case 'ArrowDown':
+                    case 'KeyS': moveBackward = false; break;
+                    case 'ArrowRight':
+                    case 'KeyD': moveRight = false; break;
+                }
+            };
+
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousedown', shootSpell);
+
+            // Evento de Redimensionamento
+            window.addEventListener('resize', onWindowResize);
+
+            // --- CONSTRUIR O MUNDO ---
+            buildEnvironment();
+            buildWand();
+            buildDragon();
+        }
+
+        function buildEnvironment() {
+            // Chão
+            const floorGeometry = new THREE.PlaneGeometry(200, 200, 32, 32);
+            
+            // Textura quadriculada processual (estilo rocha de PS1/Roblox)
+            const floorMaterial = new THREE.MeshStandardMaterial({ 
+                color: 0x2e2e2e,
+                roughness: 0.9,
+                metalness: 0.1
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Criar pilares de pedra (Ruínas)
+            const pillarGeo = new THREE.BoxGeometry(3, 15, 3);
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x555555 });
+
+            for (let i = 0; i < 15; i++) {
+                const p = new THREE.Mesh(pillarGeo, pillarMat);
+                p.position.set(
+                    (Math.random() - 0.5) * 100,
+                    7.5,
+                    (Math.random() - 0.5) * 100
+                );
+                
+                // Evitar pilares perto do centro onde começamos
+                if (p.position.length() < 15) continue;
+
+                p.castShadow = true;
+                p.receiveShadow = true;
+                scene.add(p);
+                obstacles.push(p); // Para colisão básica se necessário
+            }
+
+            // Paredes da arena
+            const wallGeo = new THREE.BoxGeometry(200, 20, 2);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            
+            const wallN = new THREE.Mesh(wallGeo, wallMat); wallN.position.set(0, 10, -100); scene.add(wallN);
+            const wallS = new THREE.Mesh(wallGeo, wallMat); wallS.position.set(0, 10, 100); scene.add(wallS);
+            
+            const wallEGeo = new THREE.BoxGeometry(2, 20, 200);
+            const wallE = new THREE.Mesh(wallEGeo, wallMat); wallE.position.set(100, 10, 0); scene.add(wallE);
+            const wallW = new THREE.Mesh(wallEGeo, wallMat); wallW.position.set(-100, 10, 0); scene.add(wallW);
+        }
+
+        function buildWand() {
+            // Criar o modelo da varinha colado na câmera
+            const wandGroup = new THREE.Group();
+            
+            // Cabo de madeira (Cilindro)
+            const handleGeo = new THREE.CylinderGeometry(0.02, 0.04, 0.6, 8);
+            handleGeo.rotateX(Math.PI / 2); // Deitar o cilindro
+            const handleMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 }); // Marrom escuro
+            const handle = new THREE.Mesh(handleGeo, handleMat);
+            wandGroup.add(handle);
+
+            // Ponta brilhante (Esfera)
+            const tipGeo = new THREE.SphereGeometry(0.035, 8, 8);
+            const tipMat = new THREE.MeshBasicMaterial({ color: 0x00ffff }); // Azul ciano brilhante
+            wandTip = new THREE.Mesh(tipGeo, tipMat);
+            wandTip.position.z = -0.3; // Na ponta da varinha
+            wandGroup.add(wandTip);
+
+            // Luz da ponta
+            const wandLight = new THREE.PointLight(0x00ffff, 0.5, 2);
+            wandLight.position.z = -0.3;
+            wandGroup.add(wandLight);
+
+            // Posicionar a varinha na visão (Canto inferior direito)
+            wandGroup.position.set(0.3, -0.2, -0.5);
+            wandGroup.rotation.y = -0.1;
+            wandGroup.rotation.x = -0.1;
+
+            camera.add(wandGroup); // Adiciona à câmera para seguir o movimento
+        }
+
+        function buildDragon() {
+            dragonGroup = new THREE.Group();
+            dragonGroup.position.set(0, 15, -30); // Posição inicial no ar
+
+            const matRed = new THREE.MeshStandardMaterial({ color: 0x8b0000, roughness: 0.7 }); // Vermelho escuro
+            const matDark = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 }); // Escamas pretas
+            const matYellow = new THREE.MeshBasicMaterial({ color: 0xffff00 }); // Olhos
+
+            // Corpo (Caixa principal)
+            const bodyGeo = new THREE.BoxGeometry(4, 3, 6);
+            const body = new THREE.Mesh(bodyGeo, matRed);
+            body.castShadow = true;
+            dragonGroup.add(body);
+
+            // Cabeça
+            dragonHead = new THREE.Group();
+            dragonHead.position.set(0, 1, -4);
+            const headBoxGeo = new THREE.BoxGeometry(2, 2, 3);
+            const headBox = new THREE.Mesh(headBoxGeo, matRed);
+            headBox.castShadow = true;
+            dragonHead.add(headBox);
+            
+            // Olhos
+            const eyeGeo = new THREE.BoxGeometry(0.4, 0.4, 0.1);
+            const eyeL = new THREE.Mesh(eyeGeo, matYellow); eyeL.position.set(1.1, 0.5, -1); dragonHead.add(eyeL);
+            const eyeR = new THREE.Mesh(eyeGeo, matYellow); eyeR.position.set(-1.1, 0.5, -1); dragonHead.add(eyeR);
+
+            // Focinho/Boca
+            const snoutGeo = new THREE.BoxGeometry(1.8, 1, 2);
+            const snout = new THREE.Mesh(snoutGeo, matDark);
+            snout.position.set(0, -0.5, -2);
+            snout.castShadow = true;
+            dragonHead.add(snout);
+
+            dragonGroup.add(dragonHead);
+
+            // Cauda
+            const tailGeo = new THREE.ConeGeometry(1, 6, 4);
+            tailGeo.rotateX(Math.PI / 2);
+            const tail = new THREE.Mesh(tailGeo, matRed);
+            tail.position.set(0, 0, 5);
+            dragonGroup.add(tail);
+
+            // Asas
+            const wingGeo = new THREE.BoxGeometry(8, 0.2, 4);
+            
+            // Asa Esquerda
+            leftWing = new THREE.Group();
+            leftWing.position.set(2, 1, 0);
+            const wL = new THREE.Mesh(wingGeo, matDark);
+            wL.position.set(4, 0, 0); // Desloca o pivô
+            wL.castShadow = true;
+            leftWing.add(wL);
+            dragonGroup.add(leftWing);
+
+            // Asa Direita
+            rightWing = new THREE.Group();
+            rightWing.position.set(-2, 1, 0);
+            const wR = new THREE.Mesh(wingGeo, matDark);
+            wR.position.set(-4, 0, 0); // Desloca o pivô
+            wR.castShadow = true;
+            rightWing.add(wR);
+            dragonGroup.add(rightWing);
+
+            scene.add(dragonGroup);
+        }
+
+        // --- SISTEMA DE COMBATE ---
+        function shootSpell() {
+            if (!gameActive) return;
+
+            // Criar a partícula da magia
+            const spellGeo = new THREE.SphereGeometry(0.2, 8, 8);
+            const spellMat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+            const spell = new THREE.Mesh(spellGeo, spellMat);
+
+            // Luz acoplada à magia
+            const light = new THREE.PointLight(0x00ffff, 1, 10);
+            spell.add(light);
+
+            // Posição inicial: pegar a posição global da ponta da varinha
+            const startPos = new THREE.Vector3();
+            wandTip.getWorldPosition(startPos);
+            spell.position.copy(startPos);
+
+            // Direção: O centro da tela (onde a câmera está olhando)
+            const dir = new THREE.Vector3(0, 0, -1);
+            dir.applyQuaternion(camera.quaternion);
+            
+            // Adicionar pequeno desvio do centro para dar ideia de tiro vindo da lateral
+            spell.userData = {
+                direction: dir.normalize(),
+                speed: 60,
+                life: 2.0 // Segundos
+            };
+
+            scene.add(spell);
+            spells.push(spell);
+
+            // Efeito visual de recuo (recoil) na varinha
+            wandTip.parent.position.z += 0.1;
+            setTimeout(() => { wandTip.parent.position.z -= 0.1; }, 100);
+        }
+
+        function dragonShootFireball() {
+            if (dragonHP <= 0 || !gameActive) return;
+
+            const fireGeo = new THREE.SphereGeometry(0.8, 16, 16);
+            const fireMat = new THREE.MeshBasicMaterial({ color: 0xff4500 }); // Laranja/Vermelho fogo
+            const fireball = new THREE.Mesh(fireGeo, fireMat);
+
+            // Efeito de brilho
+            const fireLight = new THREE.PointLight(0xff4500, 2, 20);
+            fireball.add(fireLight);
+
+            // Sai da boca do dragão
+            const startPos = new THREE.Vector3();
+            dragonHead.getWorldPosition(startPos);
+            // Move um pouco pra frente da cabeça
+            const offset = new THREE.Vector3(0, -1, -3);
+            offset.applyQuaternion(dragonGroup.quaternion);
+            startPos.add(offset);
+            
+            fireball.position.copy(startPos);
+
+            // Direção em direção ao jogador
+            const dir = new THREE.Vector3();
+            dir.subVectors(camera.position, fireball.position).normalize();
+
+            fireball.userData = {
+                direction: dir,
+                speed: 30,
+                life: 3.0
+            };
+
+            scene.add(fireball);
+            fireballs.push(fireball);
+        }
+
+        function updateProjectiles(delta) {
+            // Atualizar feitiços do jogador
+            for (let i = spells.length - 1; i >= 0; i--) {
+                const spell = spells[i];
+                spell.position.addScaledVector(spell.userData.direction, spell.userData.speed * delta);
+                spell.userData.life -= delta;
+
+                // Checar colisão com o dragão
+                if (dragonHP > 0 && spell.position.distanceTo(dragonGroup.position) < 5) { // Hitbox simples (esfera)
+                    hitDragon(15);
+                    scene.remove(spell);
+                    spells.splice(i, 1);
+                    continue;
+                }
+
+                // Checar colisão com chão/paredes
+                if (spell.position.y < 0 || spell.userData.life <= 0) {
+                    scene.remove(spell);
+                    spells.splice(i, 1);
+                }
+            }
+
+            // Atualizar bolas de fogo do dragão
+            for (let i = fireballs.length - 1; i >= 0; i--) {
+                const fb = fireballs[i];
+                fb.position.addScaledVector(fb.userData.direction, fb.userData.speed * delta);
+                fb.userData.life -= delta;
+
+                // Animar tamanho (efeito pulsante de fogo)
+                const scale = 1 + Math.sin(performance.now() * 0.01) * 0.2;
+                fb.scale.set(scale, scale, scale);
+
+                // Checar colisão com jogador
+                if (playerHP > 0 && fb.position.distanceTo(camera.position) < 2) {
+                    hitPlayer(20);
+                    scene.remove(fb);
+                    fireballs.splice(i, 1);
+                    continue;
+                }
+
+                if (fb.position.y < 0 || fb.userData.life <= 0) {
+                    scene.remove(fb);
+                    fireballs.splice(i, 1);
+                }
+            }
+        }
+
+        function hitDragon(damage) {
+            dragonHP -= damage;
+            if (dragonHP < 0) dragonHP = 0;
+            
+            // Atualizar barra UI
+            const hpPercent = (dragonHP / 300) * 100;
+            document.getElementById('dragon-health').style.width = hpPercent + '%';
+
+            // Efeito visual (piscar branco)
+            dragonGroup.children.forEach(child => {
+                if (child.material && child.material.emissive) {
+                    child.material.emissive.setHex(0xffffff);
+                    setTimeout(() => child.material.emissive.setHex(0x000000), 100);
+                }
+            });
+
+            if (dragonHP <= 0) {
+                dieDragon();
+            }
+        }
+
+        function hitPlayer(damage) {
+            playerHP -= damage;
+            if (playerHP < 0) playerHP = 0;
+
+            // Atualizar barra UI
+            const hpPercent = (playerHP / 100) * 100;
+            document.getElementById('player-health').style.width = hpPercent + '%';
+
+            // Efeito visual de dano (tela vermelha rápida)
+            const oldBg = document.body.style.backgroundColor;
+            document.body.style.backgroundColor = 'rgba(255,0,0,0.3)';
+            setTimeout(() => document.body.style.backgroundColor = oldBg, 100);
+
+            if (playerHP <= 0) {
+                gameOver(false);
+            }
+        }
+
+        function dieDragon() {
+            // Efeito de queda
+            dragonState.mode = 'dead';
+            gameOver(true);
+        }
+
+        function gameOver(win) {
+            gameActive = false;
+            controls.unlock();
+            const overScreen = document.getElementById('game-over');
+            const msg = document.getElementById('end-message');
+            
+            overScreen.style.display = 'flex';
+            if (win) {
+                msg.innerText = "DRAGÃO DERROTADO!";
+                msg.style.color = "#4CAF50";
+            } else {
+                msg.innerText = "VOCÊ FOI INCINERADO!";
+                msg.style.color = "#F44336";
+            }
+        }
+
+        // --- IA E ANIMAÇÃO DO DRAGÃO ---
+        function updateDragon(delta) {
+            if (dragonHP <= 0) {
+                // Dragão cai
+                if (dragonGroup.position.y > 0) {
+                    dragonGroup.position.y -= 20 * delta;
+                    dragonGroup.rotation.z += delta;
+                    dragonGroup.rotation.x -= delta;
+                }
+                return;
+            }
+
+            dragonState.time += delta;
+
+            // Animação de voo (asas batendo e corpo oscilando)
+            const flapSpeed = 10;
+            leftWing.rotation.z = Math.sin(dragonState.time * flapSpeed) * 0.5;
+            rightWing.rotation.z = -Math.sin(dragonState.time * flapSpeed) * 0.5;
+            
+            dragonState.hoverY = Math.sin(dragonState.time * 2) * 2;
+
+            // IA Básica
+            const distToPlayer = dragonGroup.position.distanceTo(camera.position);
+
+            // Olhar para o jogador
+            dragonGroup.lookAt(camera.position.x, dragonGroup.position.y, camera.position.z);
+            dragonHead.lookAt(camera.position); // Cabeça segue livremente
+
+            if (dragonState.mode === 'chase') {
+                // Mover em direção ao jogador se estiver longe
+                if (distToPlayer > 20) {
+                    const dir = new THREE.Vector3();
+                    dir.subVectors(camera.position, dragonGroup.position);
+                    dir.y = 0; // Manter altura fixa base
+                    dir.normalize();
+                    dragonGroup.position.addScaledVector(dir, 15 * delta); // Velocidade 15
+                } else {
+                    dragonState.mode = 'attack';
+                    dragonState.timer = 0;
+                }
+            } else if (dragonState.mode === 'attack') {
+                // Parar e atirar
+                dragonState.timer -= delta;
+                if (dragonState.timer <= 0) {
+                    dragonShootFireball();
+                    dragonState.timer = 1.5; // Atira a cada 1.5s
+                    
+                    // 30% de chance de mudar de posição
+                    if (Math.random() > 0.7) {
+                        dragonState.mode = 'reposition';
+                        dragonState.timer = 2.0; // Mover por 2s
+                        // Escolher uma direção lateral aleatória
+                        dragonState.targetPos = new THREE.Vector3(
+                            camera.position.x + (Math.random() - 0.5) * 60,
+                            20,
+                            camera.position.z + (Math.random() - 0.5) * 60
+                        );
+                    }
+                }
+            } else if (dragonState.mode === 'reposition') {
+                dragonState.timer -= delta;
+                
+                const dir = new THREE.Vector3();
+                dir.subVectors(dragonState.targetPos, dragonGroup.position).normalize();
+                dragonGroup.position.addScaledVector(dir, 20 * delta); // Voa rápido pro lado
+
+                if (dragonState.timer <= 0) {
+                    dragonState.mode = 'chase';
+                }
+            }
+
+            // Aplicar altura de hover
+            let baseHeight = 15;
+            if (dragonState.mode === 'reposition') baseHeight = 25;
+            // Interpolação suave para a altura base
+            dragonGroup.position.y += (baseHeight + dragonState.hoverY - dragonGroup.position.y) * delta * 2;
+        }
+
+        // --- LOOP PRINCIPAL ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+
+            if (controls.isLocked === true) {
+                // Física e Movimento do Jogador
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 50.0 * delta; // Gravidade forte para FPS rápido
+
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
+
+                const speed = 200.0; // Velocidade de corrida
+
+                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
+
+                controls.getObject().position.y += (velocity.y * delta);
+
+                // Colisão com o chão
+                if (controls.getObject().position.y < 2) {
+                    velocity.y = 0;
+                    controls.getObject().position.y = 2;
+                    canJump = true;
+                }
+
+                // Limites da arena (Paredes invisíveis simplificadas)
+                const pos = controls.getObject().position;
+                if (pos.x > 98) pos.x = 98;
+                if (pos.x < -98) pos.x = -98;
+                if (pos.z > 98) pos.z = 98;
+                if (pos.z < -98) pos.z = -98;
+
+                updateProjectiles(delta);
+                if (dragonGroup) updateDragon(delta);
+                
+                // Animação da Varinha fluando (bobbing)
+                if (wandTip) {
+                    const walkSpeed = Math.abs(velocity.x) + Math.abs(velocity.z);
+                    const bobbing = Math.sin(time * 0.01) * (walkSpeed * 0.0005);
+                    wandTip.parent.position.y = -0.2 + bobbing;
+                }
+            }
+
+            renderer.render(scene, camera);
+            prevTime = time;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
